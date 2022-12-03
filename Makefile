@@ -15,7 +15,21 @@ OBJDUMP = avr-objdump
 
 PYMCUPROG = pymcuprog -d $(DEVICE) $(PYMCUPROG_UART)
 
+GIT_TAG := $(shell git describe --tags --abbrev=0  --always)
+
 all: $(TARGET).hex
+
+version.h.tmp: FORCE
+	@echo "#ifndef GIT_HASH" > version.h.tmp
+	@echo "#define VERSION_MAJOR $(word 1,$(subst ., ,$(GIT_TAG)))" >> version.h.tmp
+	@echo "#define VERSION_MINOR $(word 2,$(subst ., ,$(GIT_TAG)))" >> version.h.tmp
+	@echo "#define VERSION_PATCH $(shell git log --oneline $(GIT_TAG)..HEAD| wc -l)" >> version.h.tmp
+	@echo '#define GIT_HASH $(shell git rev-parse --short=4 --abbrev-commit HEAD)' >> version.h.tmp
+	@echo "#define GIT_DIRTY $(shell git diff --quiet; echo $$?)" >> version.h.tmp
+	@echo "#endif" >> version.h.tmp
+
+version.h: version.h.tmp
+	@diff $@ $< && rm $< || mv $< $@
 
 .c.o:
 	$(COMPILE) -c $< -o $@
@@ -33,7 +47,7 @@ ping:
 	$(PYMCUPROG) ping
 
 clean:
-	rm -f $(TARGET).hex $(TARGET).elf $(OBJECTS)
+	rm -f $(TARGET).hex $(TARGET).elf $(OBJECTS) version.h
 
 $(TARGET).elf: $(OBJECTS)
 	$(COMPILE) -o $(TARGET).elf $^
@@ -56,7 +70,7 @@ cpp:
 %.lst: %.elf
 	$(OBJDUMP) -h -S $< > $@
 
-$(OBJECTS): debug.h config.h util.h Makefile
+$(OBJECTS): debug.h config.h util.h version.h Makefile
 
 .PHONY: FORCE
 FORCE:

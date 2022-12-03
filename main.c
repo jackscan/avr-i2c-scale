@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include "debug.h"
+#include "version.h"
 
 #include <avr/eeprom.h>
 #include <avr/interrupt.h>
@@ -13,6 +14,20 @@
 #include <avr/sleep.h>
 #include <avr/wdt.h>
 #include <util/delay.h>
+
+#if GIT_DIRTY
+#define GIT_DIRTY_SUFFIX "-dirty"
+#else
+#define GIT_DIRTY_SUFFIX ""
+#endif
+
+#define STR(S)       #S
+#define STRINGIFY(S) STR(S)
+
+#define VERSION_STR                                                            \
+    STRINGIFY(VERSION_MAJOR)                                                   \
+    "." STRINGIFY(VERSION_MINOR) "." STRINGIFY(VERSION_PATCH) " (" STRINGIFY(  \
+        GIT_HASH) GIT_DIRTY_SUFFIX ")"
 
 static void early_init(void) {
     cli();
@@ -183,6 +198,10 @@ static void loop(void) {
         case 'p': {
             LOGS("Powerdown\n");
             shutdown(SLEEP_MODE_PWR_DOWN);
+            break;
+        }
+        case 'v': {
+            LOGS("Version: " VERSION_STR "\n");
             break;
         }
         default: {
