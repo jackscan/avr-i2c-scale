@@ -3,7 +3,7 @@
 DEVICE     = attiny804
 CLOCK      = 3333333UL
 
-OBJECTS    = main.o debug.o
+OBJECTS    = main.o debug.o hx711.o
 
 DEFINES    = -DF_CPU=$(CLOCK)
 
@@ -70,7 +70,7 @@ cpp:
 %.lst: %.elf
 	$(OBJDUMP) -h -S $< > $@
 
-$(OBJECTS): debug.h config.h util.h version.h Makefile
+$(OBJECTS): debug.h config.h util.h version.h hx711.h Makefile
 
 .PHONY: FORCE
 FORCE:

@@ -20,6 +20,14 @@
 
 #define BAUDRATE 57600UL
 
+#define MISO_PORT PORTA
+#define MISO_BIT  (1 << 2)
+#define MISO_PINCTRL (MISO_PORT.PIN2CTRL)
+#define MISO_PORT_VECT  PORTA_PORT_vect
+
+#define SCK_PORT PORTA
+#define SCK_BIT  (1 << 3)
+
 // #define UPDI  PA0
 // #define SDA   PB1
 // #define SCL   PB0
