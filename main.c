@@ -38,8 +38,6 @@ static void early_init(void) {
         porta_pintctrl[i] = PORT_ISC_INPUT_DISABLE_gc;
         portb_pintctrl[i] = PORT_ISC_INPUT_DISABLE_gc;
     }
-    // reenable digital input for RXD
-    RXD_PINCTRL = PORT_ISC_INTDISABLE_gc;
 }
 
 static void led_init(void) {
