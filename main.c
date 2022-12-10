@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include "debug.h"
+#include "hx711.h"
 #include "version.h"
 
 #include <avr/eeprom.h>
@@ -115,6 +116,17 @@ static int16_t measure_temperature(void) {
     return (int16_t)celsius;
 }
 
+static inline uint32_t measure_weight(void) {
+    uint32_t w = 0;
+    for (uint8_t i = 0; i < 8; ++i) {
+        uint32_t r = hx711_read();
+        w += r;
+    }
+    w >>= 3;
+    hx711_powerdown();
+    return w;
+}
+
 static inline void open_valve(void) {
     VALVE_PORT.OUTSET = VALVE_BIT;
 }
@@ -188,6 +200,12 @@ static void loop(void) {
             LOG("%d.%d\n", i, f);
             break;
         }
+        case 'w': {
+            LOG("Measuring weight:\n");
+            uint32_t w = measure_weight();
+            LOG("Weight: %u\n", w);
+            break;
+        }
         case 's': {
             LOGS("Standby\n");
             shutdown(SLEEP_MODE_STANDBY);
@@ -226,6 +244,7 @@ int main(void) {
     {
         valve_init();
         led_init();
+        hx711_init();
         debug_init();
         sei();
 
