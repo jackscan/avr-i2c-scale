@@ -22,6 +22,8 @@ struct {
         HX711_TX_STARTED,
         HX711_1ST_BYTE_RECEIVED,
         HX711_TX_COMPLETE,
+        HX711_POWERING_DOWN,
+        HX711_OFF,
     } state;
 } hx711;
 
@@ -73,7 +75,22 @@ ISR(SPI0_INT_vect) {
     }
 }
 
+ISR(TCB0_INT_vect) {
+    if ((TCB0.INTFLAGS & TCB_CAPT_bm) != 0) {
+        hx711.state = HX711_OFF;
+        // Stop timer
+        TCB0.CTRLA = 0;
+        // Disable interrupt
+        TCB0.INTCTRL = TCB_CAPT_bm;
+        // Clear interrupt flag
+        TCB0.INTFLAGS = TCB_CAPT_bm;
+    }
+}
+
 void hx711_init(void) {
+    // Start powerdown timer to ensure hx711 has been off
+    // before next read is started.
+    hx711_powerdown();
     // Drive SCK high.
     // This takes effect when SPI is disabled.
     SCK_PORT.OUTSET = SCK_BIT;
@@ -87,6 +104,10 @@ void hx711_init(void) {
 }
 
 uint32_t hx711_read(void) {
+    if (hx711.state == HX711_POWERING_DOWN) {
+        hx711_await_poweroff();
+    }
+
     hx711.data = 0;
     hx711.state = HX711_INIT;
 
@@ -116,11 +137,45 @@ uint32_t hx711_read(void) {
 }
 
 void hx711_powerdown(void) {
-    // Disable SPI.
-    // This will drive SCK high which will power off HX711 after 60us
-    SPI0.CTRLA &= ~SPI_ENABLE_bm;
-    // Disable digital input on MISO pin
-    MISO_PINCTRL = PORT_ISC_INPUT_DISABLE_gc;
-    // TODO: use timer
-    _delay_us(60);
+    if (hx711.state < HX711_POWERING_DOWN) {
+        hx711.state = HX711_POWERING_DOWN;
+        // Disable SPI interrupts
+        SPI0.INTCTRL = 0;
+        // Disable SPI.
+        // This will drive SCK high which will power off HX711 after 60us
+        SPI0.CTRLA &= ~SPI_ENABLE_bm;
+        // Disable digital input on MISO pin
+        MISO_PINCTRL = PORT_ISC_INPUT_DISABLE_gc;
+
+        // Start timer to wait 60us for hx711 to enter power down mode
+        // Periodic interrupt mode
+        TCB0.CTRLB = TCB_CNTMODE_INT_gc;
+        // Calculate timer ticks for 60us
+        const uint16_t ticks = (uint16_t)((F_CPU * 60.) / 2000000.);
+        // Set TOP for 60us
+        TCB0.CCMP = ticks;
+        // Clear capture interrupt flag
+        TCB0.INTFLAGS = TCB_CAPT_bm;
+        // Enable capture interrupt
+        TCB0.INTCTRL = TCB_CAPT_bm;
+        // Start timer with CLKDIV2, and run in standby
+        TCB0.CTRLA = TCB_RUNSTDBY_bm | TCB_CLKSEL_CLKDIV2_gc | TCB_ENABLE_bm;
+    }
+}
+
+void hx711_await_poweroff(void) {
+    if (hx711.state != HX711_OFF) {
+        hx711_powerdown();
+    }
+
+    cli();
+    set_sleep_mode(SLEEP_MODE_STANDBY);
+    while (hx711.state != HX711_OFF) {
+        sleep_enable();
+        sei();
+        sleep_cpu();
+        sleep_disable();
+        cli();
+    }
+    sei();
 }

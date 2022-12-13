@@ -151,6 +151,7 @@ static void shutdown(uint8_t mode) {
     } else {
         debug_stop();
     }
+    hx711_await_poweroff();
     cli();
     if (mode == SLEEP_MODE_STANDBY) {
         debug_prepare_standby();
