@@ -7,6 +7,7 @@
 #include "debug.h"
 #include "hx711.h"
 #include "version.h"
+#include "buckets.h"
 
 #include <avr/eeprom.h>
 #include <avr/interrupt.h>
@@ -118,12 +119,19 @@ static int16_t measure_temperature(void) {
 
 static inline uint32_t measure_weight(void) {
     uint32_t w = 0;
-    for (uint8_t i = 0; i < 8; ++i) {
+    buckets_reset();
     hx711_start();
+    for (uint8_t i = 0; i < 32; ++i) {
         uint32_t r = hx711_read();
+        LOG("%lu\n", r);
+        LED_PORT.OUTCLR = LED_BIT;
+        buckets_add(r);
+        LED_PORT.OUTSET = LED_BIT;
+        buckets_dump();
         w += r;
     }
-    w >>= 3;
+    LOG("f: %lu\n", buckets_filter());
+    w >>= 5;
     hx711_powerdown();
     return w;
 }
@@ -205,7 +213,7 @@ static void loop(void) {
         case 'w': {
             LOG("Measuring weight:\n");
             uint32_t w = measure_weight();
-            LOG("Weight: %u\n", w);
+            LOG("Weight: %lu\n", w);
             break;
         }
         case 's': {
@@ -248,6 +256,7 @@ int main(void) {
         led_init();
         hx711_init();
         debug_init();
+        buckets_init(1);
         sei();
 
         debug_dump_trace();
