@@ -119,6 +119,7 @@ static int16_t measure_temperature(void) {
 static inline uint32_t measure_weight(void) {
     uint32_t w = 0;
     for (uint8_t i = 0; i < 8; ++i) {
+    hx711_start();
         uint32_t r = hx711_read();
         w += r;
     }
