@@ -149,17 +149,13 @@ bool hx711_is_off(void) {
     return hx711.state == HX711_OFF;
 }
 
+bool hx711_is_active(void)
+{
+    return hx711.state < HX711_POWERING_DOWN;
+}
+
 uint32_t hx711_read(void) {
     cli();
-    // Sleep while waiting for data to be ready and transfer to complete
-    set_sleep_mode(SLEEP_MODE_IDLE);
-    while (!hx711_is_data_available()) {
-        sleep_enable();
-        sei();
-        sleep_cpu();
-        sleep_disable();
-        cli();
-    }
     uint32_t d = hx711.data;
     hx711.data = 0;
     sei();

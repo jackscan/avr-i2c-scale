@@ -3,11 +3,13 @@
     SPDX-License-Identifier: MIT
 */
 
+#include "buckets.h"
 #include "config.h"
 #include "debug.h"
 #include "hx711.h"
+#include "nvm.h"
+#include "twi.h"
 #include "version.h"
-#include "buckets.h"
 
 #include <avr/eeprom.h>
 #include <avr/interrupt.h>
@@ -93,7 +95,7 @@ static int16_t measure_temperature(void) {
     ADC0.COMMAND = ADC_STCONV_bm;
 
     cli();
-    set_sleep_mode(SLEEP_MODE_STANDBY);
+    set_sleep_mode(SLEEP_MODE_IDLE);
     sleep_enable();
     while (adc0_res == 0) {
         sei();
@@ -117,23 +119,15 @@ static int16_t measure_temperature(void) {
     return (int16_t)celsius;
 }
 
-static inline uint32_t measure_weight(void) {
-    uint32_t w = 0;
-    buckets_reset();
-    hx711_start();
-    for (uint8_t i = 0; i < 32; ++i) {
-        uint32_t r = hx711_read();
-        LOG("%lu\n", r);
-        LED_PORT.OUTCLR = LED_BIT;
-        buckets_add(r);
-        LED_PORT.OUTSET = LED_BIT;
-        buckets_dump();
-        w += r;
+static inline uint32_t calculate_weight(uint32_t result) {
+    if (result < calib_data.hx711.offset) {
+        return 0UL;
     }
-    LOG("f: %lu\n", buckets_filter());
-    w >>= 5;
-    hx711_powerdown();
-    return w;
+    uint16_t s = calib_data.hx711.scale;
+    uint32_t r = result - calib_data.hx711.offset;
+    uint32_t a = r * (s >> 8);
+    uint32_t b = r * (s & 0xff) / 256UL;
+    return (a + b) / 256UL;
 }
 
 static inline void open_valve(void) {
@@ -184,7 +178,8 @@ static void wait_for_input(void) {
     cli();
     set_sleep_mode(SLEEP_MODE_IDLE);
     sleep_enable();
-    while (!debug_char_pending()) {
+    while (!twi_task_pending() && !hx711_is_data_available() &&
+           !debug_char_pending()) {
         sei();
         sleep_cpu();
         cli();
@@ -194,47 +189,78 @@ static void wait_for_input(void) {
 }
 
 static void loop(void) {
+    struct twi_data twi_data = {.task = TWI_CMD_NONE, .count = 0};
     for (;;) {
         wdt_reset();
         LOGS("Waiting for command\n");
         wait_for_input();
         wdt_reset();
         LED_PORT.OUTSET = LED_BIT;
-        char cmd = debug_getchar();
-        switch (cmd) {
-        case 't': {
-            LOGS("Measuring temperature: ");
-            int16_t t = measure_temperature();
-            int16_t i = t >> 4;
-            uint8_t f = (((t > 0 ? t : -t) & 0xF) * 10) >> 4;
-            LOG("%d.%d\n", i, f);
-            break;
+        if (debug_char_pending()) {
+            char cmd = debug_getchar();
+            switch (cmd) {
+            case 's': {
+                LOGS("Standby\n");
+                shutdown(SLEEP_MODE_STANDBY);
+                break;
+            }
+            case 'd': twi_dump_dbg(); break;
+            default: {
+                LOG("Invalid command: '%c'\n", cmd);
+                break;
+            }
+            }
         }
-        case 'w': {
-            LOG("Measuring weight:\n");
-            uint32_t w = measure_weight();
-            LOG("Weight: %lu\n", w);
-            break;
+        if (twi_task_pending()) {
+            twi_read(&twi_data);
+            if (twi_data.task != TWI_CMD_NONE &&
+                twi_data.task != TWI_CMD_MEASURE_WEIGHT && hx711_is_active()) {
+                hx711_powerdown();
+            }
+            switch (twi_data.task) {
+            case TWI_CMD_SLEEP:
+                LOGS("SLEEP\n");
+                shutdown(SLEEP_MODE_PWR_DOWN);
+                break;
+            case TWI_CMD_MEASURE_WEIGHT:
+                if (!hx711_is_active()) {
+                    buckets_reset();
+                    hx711_start();
+                    LOGS("MEASURE_WEIGHT\n");
+                }
+                break;
+            case TWI_CMD_GET_TEMP: {
+                int16_t t = measure_temperature();
+                uint8_t d[2] = {t & 0xFF, t >> 8};
+                twi_write(TWI_CMD_GET_TEMP, sizeof(d), d);
+                int16_t i = t >> 4;
+                uint8_t f = (((t > 0 ? t : -t) & 0xF) * 10) >> 4;
+                LOG("GET_TEMP: %d.%d\n", i, f);
+                break;
+            }
+            }
         }
-        case 's': {
-            LOGS("Standby\n");
-            shutdown(SLEEP_MODE_STANDBY);
-            break;
+        if (hx711_is_data_available()) {
+            uint32_t d = hx711_read();
+            LOG("w: %lu\n", d);
+            if (hx711_is_active()) {
+                buckets_add(d);
+                accu_t r = buckets_filter();
+                // todo: add "shift + buckets", count, total
+                // todo: check if buckets can contain garbage
+                uint8_t data[5] = {
+                    r.count,
+                    (r.sum >> 24) & 0xff,
+                    (r.sum >> 16) & 0xff,
+                    (r.sum >> 8) & 0xff,
+                    (r.sum) & 0xff,
+                };
+                twi_write(TWI_CMD_MEASURE_WEIGHT, 5, data);
+                LOG("c: %lu, %u, %u\n", r.sum, r.count, r.shift);
+                buckets_dump();
+            }
         }
-        case 'p': {
-            LOGS("Powerdown\n");
-            shutdown(SLEEP_MODE_PWR_DOWN);
-            break;
-        }
-        case 'v': {
-            LOGS("Version: " VERSION_STR "\n");
-            break;
-        }
-        default: {
-            LOG("Invalid command: '%c'\n", cmd);
-            break;
-        }
-        }
+
         LED_PORT.OUTCLR = LED_BIT;
     }
 }
@@ -256,6 +282,8 @@ int main(void) {
         led_init();
         hx711_init();
         debug_init();
+        nvm_init();
+        twi_init(twi_addr);
         buckets_init(1);
         sei();
 
@@ -264,6 +292,7 @@ int main(void) {
     }
 
     LOG("\nreset: %#x\n", rstfr);
+    LOG("TWI Addr: %#x\n", twi_addr);
     start_watchdog();
     loop();
 

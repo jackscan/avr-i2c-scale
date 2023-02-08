@@ -9,7 +9,7 @@
 
 #include <string.h>
 
-#define BUCKET_COUNT   8
+#define BUCKET_COUNT 8
 
 struct {
     uint32_t accu[BUCKET_COUNT];
@@ -25,8 +25,7 @@ void buckets_init(uint8_t min_shift) {
     buckets.min_shift = min_shift;
 }
 
-void buckets_reset(void)
-{
+void buckets_reset(void) {
     memset(buckets.accu, 0, sizeof(buckets.accu));
     memset(buckets.count, 0, sizeof(buckets.count));
     buckets.shift = 0;
@@ -34,8 +33,7 @@ void buckets_reset(void)
     buckets.upper = 0;
 }
 
-bool buckets_empty(void)
-{
+bool buckets_empty(void) {
     return buckets.upper == 0;
 }
 
@@ -74,8 +72,7 @@ void buckets_deflate(void) {
     buckets.lower = j;
 }
 
-void buckets_add(uint32_t val)
-{
+void buckets_add(uint32_t val) {
     if (buckets_empty()) {
         buckets.shift = buckets.min_shift;
         buckets.base = val;
@@ -106,13 +103,13 @@ void buckets_add(uint32_t val)
     ++buckets.count[i];
 }
 
-uint32_t buckets_filter(void) {
+accu_t buckets_filter(void) {
     uint8_t total = 0;
     for (uint8_t i = 0; i < BUCKET_COUNT; ++i) {
         total += buckets.count[i];
     }
     uint8_t thresh = total / BUCKET_COUNT;
-    uint8_t start = buckets.lower;
+    uint8_t start = buckets.lower % BUCKET_COUNT;
     while (buckets.count[start] < thresh) {
         start = (start + 1) % BUCKET_COUNT;
     }
@@ -121,16 +118,19 @@ uint32_t buckets_filter(void) {
         end = (end - 1) % BUCKET_COUNT;
     }
 
-    uint8_t count = 0;
-    uint32_t sum = 0;
+    accu_t res = {
+        .sum = 0,
+        .count = 0,
+        .shift = buckets.shift,
+    };
     uint8_t i = start;
     do {
-        count += buckets.count[i];
-        sum += buckets.accu[i];
+        res.count += buckets.count[i];
+        res.sum += buckets.accu[i];
         i = (i + 1) % BUCKET_COUNT;
     } while (i != end);
 
-    return sum / count;
+    return res;
 }
 
 void buckets_dump(void) {
