@@ -3,7 +3,7 @@
 DEVICE     = attiny804
 CLOCK      = 3333333UL
 
-OBJECTS    = main.o debug.o hx711.o buckets.o
+OBJECTS    = main.o debug.o hx711.o buckets.o twi.o nvm.o
 
 DEFINES    = -DF_CPU=$(CLOCK)
 
@@ -24,7 +24,7 @@ version.h.tmp: FORCE
 	@echo "#define VERSION_MAJOR $(word 1,$(subst ., ,$(GIT_TAG)))" >> version.h.tmp
 	@echo "#define VERSION_MINOR $(word 2,$(subst ., ,$(GIT_TAG)))" >> version.h.tmp
 	@echo "#define VERSION_PATCH $(shell git log --oneline $(GIT_TAG)..HEAD| wc -l)" >> version.h.tmp
-	@echo '#define GIT_HASH $(shell git rev-parse --short=4 --abbrev-commit HEAD)' >> version.h.tmp
+	@echo '#define GIT_HASH 0x$(shell git rev-parse --short=4 --abbrev-commit HEAD)' >> version.h.tmp
 	@echo "#define GIT_DIRTY $(shell git diff --quiet; echo $$?)" >> version.h.tmp
 	@echo "#endif" >> version.h.tmp
 
@@ -70,7 +70,7 @@ cpp:
 %.lst: %.elf
 	$(OBJDUMP) -h -S $< > $@
 
-$(OBJECTS): debug.h config.h util.h version.h hx711.h buckets.h Makefile
+$(OBJECTS): debug.h config.h util.h version.h hx711.h buckets.h twi.h nvm.h Makefile
 
 .PHONY: FORCE
 FORCE:
