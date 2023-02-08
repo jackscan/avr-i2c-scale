@@ -277,13 +277,13 @@ void debug_init_trace(void) {
 
 void debug_dump_trace(void) {
     if ((s_trace.index & 1) == 0 && s_trace.index < sizeof(s_trace.addr)) {
-        printf("trace:");
+        LOG("trace:");
         uint8_t i = s_trace.index / 2;
         do {
             i = (i + 1) % TRACE_LEN;
-            printf(" %#x", s_trace.addr[i] * 2);
+            LOG(" %#x", s_trace.addr[i] * 2);
         } while (i * 2 != s_trace.index);
-        printf("\n");
+        LOG("\n");
     }
 }
 #endif
