@@ -49,7 +49,7 @@ void debug_dump_trace(void);
 void checkpoint(void);
 #define CHECKPOINT checkpoint()
 #else
-#define CHECKPOINT
+#define CHECKPOINT do {} while (0)
 static inline void debug_init_trace(void) {}
 static inline void debug_dump_trace(void) {}
 #endif
