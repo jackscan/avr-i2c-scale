@@ -11,7 +11,8 @@
 typedef struct accu {
     uint32_t sum;
     uint8_t count;
-    uint8_t shift;
+    uint8_t total;
+    uint8_t span;
 } accu_t;
 
 void buckets_init(uint8_t min_shift);

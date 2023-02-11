@@ -103,33 +103,66 @@ void buckets_add(uint32_t val) {
     ++buckets.count[i];
 }
 
+static uint8_t buckets_start(uint8_t thresh) {
+    uint8_t start = buckets.lower;
+    for (; start < BUCKET_COUNT; ++start) {
+        if (buckets.count[start] >= thresh) {
+            return start;
+        }
+    }
+    start = 0;
+    while (buckets.count[start] < thresh) {
+        ++start;
+    }
+    return start;
+}
+
+static uint8_t buckets_end(uint8_t thresh) {
+    uint8_t end = buckets.upper;
+    for (; end > 0; --end) {
+        if (buckets.count[end - 1] >= thresh) {
+            return end;
+        }
+    }
+    end = BUCKET_COUNT;
+    while (buckets.count[end - 1] < thresh) {
+        --end;
+    }
+    return end;
+}
+
 accu_t buckets_filter(void) {
     uint8_t total = 0;
     for (uint8_t i = 0; i < BUCKET_COUNT; ++i) {
         total += buckets.count[i];
     }
     uint8_t thresh = total / BUCKET_COUNT;
-    uint8_t start = buckets.lower % BUCKET_COUNT;
-    while (buckets.count[start] < thresh) {
-        start = (start + 1) % BUCKET_COUNT;
-    }
-    uint8_t end = buckets.upper;
-    while (buckets.count[end - 1] < thresh) {
-        end = (end - 1) % BUCKET_COUNT;
-    }
+
+    uint8_t start = buckets_start(thresh);
+    uint8_t end = buckets_end(thresh);
 
     accu_t res = {
         .sum = 0,
         .count = 0,
-        .shift = buckets.shift,
+        .total = total,
+        .span = end - start - 1,
     };
     uint8_t i = start;
-    do {
+    if (end <= start) {
+        for (; i < BUCKET_COUNT; ++i) {
+            res.count += buckets.count[i];
+            res.sum += buckets.accu[i];
+        }
+        i = 0;
+        res.span += BUCKET_COUNT;
+    }
+
+    res.span |= buckets.shift << 3;
+
+    for (; i < end; ++i) {
         res.count += buckets.count[i];
         res.sum += buckets.accu[i];
-        i = (i + 1) % BUCKET_COUNT;
-    } while (i != end);
-
+    }
     return res;
 }
 

@@ -245,19 +245,21 @@ static void loop(void) {
             LOG("w: %lu\n", d);
             if (hx711_is_active()) {
                 buckets_add(d);
+                buckets_dump();
                 accu_t r = buckets_filter();
                 // todo: add "shift + buckets", count, total
                 // todo: check if buckets can contain garbage
-                uint8_t data[5] = {
+                uint8_t data[7] = {
                     r.count,
                     (r.sum >> 24) & 0xff,
                     (r.sum >> 16) & 0xff,
                     (r.sum >> 8) & 0xff,
                     (r.sum) & 0xff,
+                    r.total,
+                    r.span,
                 };
-                twi_write(TWI_CMD_MEASURE_WEIGHT, 5, data);
-                LOG("c: %lu, %u, %u\n", r.sum, r.count, r.shift);
-                buckets_dump();
+                twi_write(TWI_CMD_MEASURE_WEIGHT, 7, data);
+                LOG("c: %lu, %u/%u, %u\n", r.sum, r.count, r.total, r.span);
             }
         }
 
