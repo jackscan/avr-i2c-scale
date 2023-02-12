@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "hx711.h"
 #include "nvm.h"
+#include "timer.h"
 #include "twi.h"
 #include "version.h"
 
@@ -286,6 +287,7 @@ int main(void) {
         debug_init();
         nvm_init();
         twi_init(twi_addr);
+        timer_init();
         buckets_init(1);
         sei();
 
