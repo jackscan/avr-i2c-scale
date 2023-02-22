@@ -14,6 +14,7 @@ void timer_init(void) {
 }
 
 void timer_start(void) {
+    TCA0.SINGLE.CTRLA = 0;
     TCA0.SINGLE.CTRLESET = TCA_SINGLE_CMD_RESTART_gc;
     TCA0.SINGLE.CTRLA = TCA_SINGLE_CLKSEL_DIV1024_gc | TCA_SINGLE_ENABLE_bm;
 }
