@@ -30,6 +30,6 @@ uint16_t timer_get_time(void) {
 uint16_t timer_get_time_ms(void) {
     // t * 1000 * 1024 / F_CPU
     uint32_t t = TCA0.SINGLE.CNT;
-    const uint32_t f = F_CPU >> 4;
-    return (uint16_t)(t * 1000UL * 64UL / f);
+    const uint32_t s = (1000ULL * 1024ULL * 0x10000ULL + F_CPU / 2) / F_CPU;
+    return (uint16_t)((t * s) >> 16);
 }
