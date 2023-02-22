@@ -3,7 +3,7 @@
 DEVICE     = attiny804
 CLOCK      = 3333333UL
 
-OBJECTS    = main.o debug.o hx711.o buckets.o twi.o nvm.o timer.o
+OBJECTS    = main.o debug.o hx711.o buckets.o twi.o nvm.o timer.o util.o
 
 DEFINES    = -DF_CPU=$(CLOCK)
 

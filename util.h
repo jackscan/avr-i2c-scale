@@ -48,6 +48,11 @@ static inline char *strprefix(char *str, const __flash char *prefix) {
     return str + n;
 }
 
+void write_big_endian_u16(uint8_t *dst, uint16_t v);
+void write_big_endian_u32(uint8_t *dst, uint32_t v);
+void read_big_endian_u16(uint16_t *dst, uint8_t *src);
+void read_big_endian_u32(uint32_t *dst, uint8_t *src);
+
 #define GET_SP()                                                               \
     ({                                                                         \
         void *temp;                                                            \
