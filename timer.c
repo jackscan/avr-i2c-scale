@@ -9,13 +9,7 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 
-ISR(TCA0_OVF_vect) {
-    // Reset interrupt flag
-    TCA0.SINGLE.INTFLAGS = TCA_SINGLE_OVF_bm;
-}
-
 void timer_init(void) {
-    TCA0.SINGLE.INTCTRL = TCA_SINGLE_OVF_bm;
     TCA0.SINGLE.PER = 0xFFFF;
 }
 
