@@ -5,31 +5,43 @@
 
 #include "timer.h"
 
-#include <util/delay.h>
+#include "debug.h"
+
 #include <avr/interrupt.h>
 #include <avr/io.h>
+#include <util/delay.h>
+
+static void wait_for(uint8_t bm) {
+    while ((RTC.STATUS & bm) != 0) {
+    }
+}
 
 void timer_init(void) {
-    TCA0.SINGLE.PER = 0xFFFF;
+    // Wait for registers to synchronize
+    wait_for(0xFF);
+
+    RTC.PER = 0xffff;
+    RTC.CLKSEL = RTC_CLKSEL_INT32K_gc;
 }
 
 void timer_start(void) {
-    TCA0.SINGLE.CTRLA = 0;
-    TCA0.SINGLE.CTRLESET = TCA_SINGLE_CMD_RESTART_gc;
-    TCA0.SINGLE.CTRLA = TCA_SINGLE_CLKSEL_DIV1024_gc | TCA_SINGLE_ENABLE_bm;
+    wait_for(RTC_CTRLABUSY_bm);
+    RTC.CTRLA = RTC_PRESCALER_DIV32_gc;
+    wait_for(RTC_CNTBUSY_bm | RTC_CTRLABUSY_bm);
+    RTC.CNT = 0;
+    RTC.CTRLA |= RTC_RTCEN_bm | RTC_RUNSTDBY_bm;
 }
 
 void timer_stop(void) {
-    TCA0.SINGLE.CTRLA &= ~TCA_SINGLE_ENABLE_bm;
+    wait_for(RTC_CTRLABUSY_bm);
+    RTC.CTRLA = 0;
 }
 
 uint16_t timer_get_time(void) {
-    return TCA0.SINGLE.CNT;
+    return RTC.CNT;
 }
 
-uint16_t timer_get_time_ms(void) {
-    // t * 1000 * 1024 / F_CPU
-    uint32_t t = TCA0.SINGLE.CNT;
-    const uint32_t s = (1000ULL * 1024ULL * 0x10000ULL + F_CPU / 2) / F_CPU;
-    return (uint16_t)((t * s) >> 16);
+uint8_t timer_get_time_ms(void) {
+    uint16_t t = RTC.CNT;
+    return t * 250U / 256;
 }

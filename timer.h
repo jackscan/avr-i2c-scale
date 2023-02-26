@@ -9,4 +9,4 @@ void timer_init(void);
 void timer_start(void);
 void timer_stop(void);
 uint16_t timer_get_time(void);
-uint16_t timer_get_time_ms(void);
+uint8_t timer_get_time_ms(void);
