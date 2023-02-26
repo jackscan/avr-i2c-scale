@@ -23,9 +23,10 @@
 enum {
     TWI_CMD_SLEEP = 0x00,
     TWI_CMD_MEASURE_WEIGHT = 0x50,
-    TWI_CMD_OPEN_VALVE = 0x51,
-    TWI_CMD_CLOSE_VALVE = 0x52,
-    TWI_CMD_GET_TEMP = 0x53,
+    TWI_CMD_TRACK_WEIGHT = 0x51,
+    TWI_CMD_OPEN_VALVE = 0x52,
+    TWI_CMD_CLOSE_VALVE = 0x53,
+    TWI_CMD_GET_TEMP = 0x54,
     TWI_CMD_GET_CALIB = 0x55,
     TWI_CMD_SET_CALIB = 0x56,
     TWI_CMD_ENABLE_WD = 0x57,
@@ -45,13 +46,14 @@ struct twi_data {
 
 void twi_init(uint8_t addr);
 void twi_reset(void);
-// uint8_t twi_get_task(void);
 bool twi_task_pending(void);
-void twi_write(uint8_t result, uint8_t count, const uint8_t *data);
-void twi_write_P(uint8_t result, uint8_t count, const __flash uint8_t *data);
-void twi_write_done(uint8_t result);
+void twi_write(uint8_t count, const uint8_t *data);
+void twi_write_P(uint8_t count, const __flash uint8_t *data);
 void twi_read(struct twi_data *data);
-// void twi_set_temp(int8_t temp);
-// void twi_set_weight(uint32_t weight, uint8_t count);
+uint8_t twi_get_send_count(void);
 
+#ifndef NDEBUG
 void twi_dump_dbg(void);
+#else
+static inline void twi_dump_dbg(void) {}
+#endif

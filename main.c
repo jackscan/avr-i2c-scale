@@ -126,8 +126,8 @@ static inline uint32_t calculate_weight(uint32_t result) {
     }
     uint16_t s = calib_data.hx711.scale;
     uint32_t r = result - calib_data.hx711.offset;
-    uint32_t a = r * (s >> 8);
-    uint32_t b = r * (s & 0xff) / 256UL;
+    uint32_t a = r * (uint8_t)(s >> 8);
+    uint32_t b = r * (uint8_t)(s & 0xff) / 256UL;
     return (a + b) / 256UL;
 }
 
@@ -189,11 +189,20 @@ static void wait_for_input(void) {
     sei();
 }
 
+struct twi_data twi_data = {.task = TWI_CMD_NONE, .count = 0};
+
+static bool expect_twi_data(uint8_t count) {
+    if (twi_data.count != count) {
+        LOG("%#x: invalid: %u\n", twi_data.task, twi_data.count);
+        return false;
+    }
+    return true;
+}
+
 static void loop(void) {
-    struct twi_data twi_data = {.task = TWI_CMD_NONE, .count = 0};
     for (;;) {
         wdt_reset();
-        LOGS("Waiting for command\n");
+        LOGS("> ");
         wait_for_input();
         wdt_reset();
         LED_PORT.OUTSET = LED_BIT;
@@ -201,55 +210,75 @@ static void loop(void) {
             char cmd = debug_getchar();
             switch (cmd) {
             case 's': {
-                LOGS("Standby\n");
+                LOGS("Stdby\n");
                 shutdown(SLEEP_MODE_STANDBY);
                 break;
             }
             case 'd': twi_dump_dbg(); break;
             default: {
-                LOG("Invalid command: '%c'\n", cmd);
+                LOG("Invalid: '%c'\n", cmd);
                 break;
             }
             }
         }
         if (twi_task_pending()) {
             twi_read(&twi_data);
-            if (twi_data.task != TWI_CMD_NONE &&
-                twi_data.task != TWI_CMD_MEASURE_WEIGHT && hx711_is_active()) {
-                hx711_powerdown();
-            }
             switch (twi_data.task) {
             case TWI_CMD_SLEEP:
-                LOGS("SLEEP\n");
+                LOGS("SLP\n");
                 shutdown(SLEEP_MODE_PWR_DOWN);
                 break;
-            case TWI_CMD_MEASURE_WEIGHT:
+            case TWI_CMD_TRACK_WEIGHT:
+                timer_start();
                 if (!hx711_is_active()) {
-                    buckets_reset();
                     hx711_start();
-                    LOGS("MEASURE_WEIGHT\n");
+                    LOGS("TRACK\n");
+                }
+                break;
+            case TWI_CMD_MEASURE_WEIGHT:
+                buckets_reset();
+                LOGS("MEAS\n");
+                if (!hx711_is_active()) {
+                    hx711_start();
                 }
                 break;
             case TWI_CMD_GET_TEMP: {
                 int16_t t = measure_temperature();
-                uint8_t d[2] = {t & 0xFF, t >> 8};
-                twi_write(TWI_CMD_GET_TEMP, sizeof(d), d);
+                uint8_t d[2];
+                write_big_endian_u16(d, t);
+                twi_write(sizeof(d), d);
                 int16_t i = t >> 4;
                 uint8_t f = (((t > 0 ? t : -t) & 0xF) * 10) >> 4;
-                LOG("GET_TEMP: %d.%d\n", i, f);
+                LOG("TEMP: %d.%d\n", i, f);
                 break;
             }
+            if (twi_data.task != TWI_CMD_MEASURE_WEIGHT &&
+                twi_data.task != TWI_CMD_TRACK_WEIGHT && hx711_is_active()) {
+                hx711_powerdown();
             }
         }
         if (hx711_is_data_available()) {
             uint32_t d = hx711_read();
-            LOG("w: %lu\n", d);
-            if (hx711_is_active()) {
-                buckets_add(d);
+            uint32_t w = calculate_weight(d);
+            LOG("w: %lu (%lu)\n", w, d);
+            if (twi_data.task == TWI_CMD_TRACK_WEIGHT) {
+                uint16_t rt = timer_get_time();
+                uint8_t t = rt * 250U / 256;
+                // uint16_t t = timer_get_time_ms();
+                uint8_t data[6] = {
+                    (w >> 24) & 0xff,
+                    (w >> 16) & 0xff,
+                    (w >> 8) & 0xff,
+                    w & 0xff,
+                    0,
+                    t & 0xFF,
+                };
+                twi_write(6, data);
+                LOG("t: %u, %u\n", t, rt);
+            } else if (twi_data.task == TWI_CMD_MEASURE_WEIGHT) {
+                buckets_add(w);
                 buckets_dump();
                 accu_t r = buckets_filter();
-                // todo: add "shift + buckets", count, total
-                // todo: check if buckets can contain garbage
                 uint8_t data[7] = {
                     r.count,
                     (r.sum >> 24) & 0xff,
@@ -259,7 +288,7 @@ static void loop(void) {
                     r.total,
                     r.span,
                 };
-                twi_write(TWI_CMD_MEASURE_WEIGHT, 7, data);
+                twi_write(7, data);
                 LOG("c: %lu, %u/%u, %u\n", r.sum, r.count, r.total, r.span);
             }
         }
@@ -295,8 +324,8 @@ int main(void) {
         debug_init_trace();
     }
 
-    LOG("\nreset: %#x\n", rstfr);
-    LOG("TWI Addr: %#x\n", twi_addr);
+    LOG("\nrst: %#x\n", rstfr);
+    LOG("ADDR: %#x\n", twi_addr);
     start_watchdog();
     loop();
 
