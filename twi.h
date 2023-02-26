@@ -47,6 +47,7 @@ struct twi_data {
 void twi_init(uint8_t addr);
 void twi_reset(void);
 bool twi_task_pending(void);
+bool twi_busy(void);
 void twi_write(uint8_t count, const uint8_t *data);
 void twi_write_P(uint8_t count, const __flash uint8_t *data);
 void twi_read(struct twi_data *data);

@@ -37,6 +37,7 @@ struct {
     uint8_t state;
     bool blocked;
     bool loaded;
+    bool busy;
 } twi = {.cmd = TWI_CMD_NONE, .task = TWI_CMD_NONE};
 
 #ifndef NDEBUG
@@ -143,12 +144,14 @@ ISR(TWI0_TWIS_vect) {
                 twi.state = STARTED;
                 twi.index = 0;
                 twi.crc = 0;
+                twi.busy = true;
             } else if ((status & TWI_DIR_bm) == 0 && !twi.blocked) {
                 // Master write
                 TWI0.SCTRLB = ACK;
                 twi.state = STARTED;
                 twi.index = 0;
                 twi.loaded = false;
+                twi.busy = true;
             } else {
                 TWI0.SCTRLB = NACK;
                 twi.state = IDLE;
@@ -265,6 +268,12 @@ uint8_t twi_get_task(void) {
 
 bool twi_task_pending(void) {
     return twi.task != TWI_CMD_NONE;
+}
+
+bool twi_busy(void) {
+    bool busy = twi.busy;
+    twi.busy = false;
+    return busy;
 }
 
 static bool twi_prepare_load(uint8_t count) {

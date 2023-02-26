@@ -184,6 +184,9 @@ static void wait_for_input(void) {
         sei();
         sleep_cpu();
         cli();
+        if (twi_busy()) {
+            wdt_reset();
+        }
     }
     sleep_disable();
     sei();
@@ -201,10 +204,11 @@ static bool expect_twi_data(uint8_t count) {
 
 static void loop(void) {
     for (;;) {
-        wdt_reset();
         LOGS("> ");
         wait_for_input();
-        wdt_reset();
+        if (twi_task_pending() || debug_char_pending()) {
+            wdt_reset();
+        }
         LED_PORT.OUTSET = LED_BIT;
         if (debug_char_pending()) {
             char cmd = debug_getchar();
@@ -326,7 +330,7 @@ int main(void) {
 
     LOG("\nrst: %#x\n", rstfr);
     LOG("ADDR: %#x\n", twi_addr);
-    start_watchdog();
+    shutdown(SLEEP_MODE_STANDBY);
     loop();
 
     return 0; /* never reached */
