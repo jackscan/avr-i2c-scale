@@ -227,16 +227,21 @@ ISR(TWI0_TWIS_vect) {
 void twi_dump_dbg(void) {
     LOGS("TWI:\n");
     for (uint8_t i = 0; i < twi_dbg.index; i++) {
-        LOG("%#x, ", twi_dbg.buf[i].status);
+        LOGHEX(twi_dbg.buf[i].status);
+        LOGS(", ");
         switch (twi_dbg.buf[i].state_index >> 6) {
         case IDLE: LOGS("IDLE"); break;
         case STARTED: LOGS("STARTED"); break;
         case IN_PROGRESS: LOGS("IN_PROGRESS"); break;
         }
-        LOG(", %d, %x\n", twi_dbg.buf[i].state_index & 0x3F, twi_dbg.buf[i].crc);
+        LOGS(", ");
+        LOGDEC(twi_dbg.buf[i].state_index & 0x3F);
+        LOGS(", ");
+        LOGHEX(twi_dbg.buf[i].crc);
     }
     for (uint8_t i = 0; i < TWI_BUFFER_SIZE; ++i) {
-        LOG(" %#x", twi.buf[i]);
+        LOGC(' ');
+        LOGHEX(twi.buf[i]);
     }
     LOGC('\n');
     twi_dbg.index = 0;

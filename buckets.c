@@ -167,9 +167,20 @@ accu_t buckets_filter(void) {
 }
 
 void buckets_dump(void) {
-    LOG("[%u, %u, %u, %lu]\n", buckets.upper, buckets.lower, buckets.shift,
-        buckets.base);
+    LOGC('[');
+    LOGDEC(buckets.upper);
+    LOGS(", ");
+    LOGDEC(buckets.lower);
+    LOGS(", ");
+    LOGDEC(buckets.shift);
+    LOGS(", ");
+    LOGDEC_U32(buckets.base);
+    LOGS("]\n");
+
     for (int8_t i = 0; i < BUCKET_COUNT; ++i) {
-        LOG("%u, %lu\n", buckets.count[i], buckets.accu[i]);
+        LOGDEC(buckets.count[i]);
+        LOGS(", ");
+        LOGDEC_U32(buckets.accu[i]);
+        LOGNL();
     }
 }

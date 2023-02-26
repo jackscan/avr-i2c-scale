@@ -11,16 +11,11 @@
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include <avr/sleep.h>
-#include <stdio.h>
 #include <string.h>
 
 #ifndef NO_SERIAL
 
 #define USART0_BAUD_RATE(R) ((uint16_t)((F_CPU * 64UL + 8UL * R) / (16UL * R)))
-
-static int dbg_putchar(char c, FILE *stream);
-
-static FILE dbgstdout = FDEV_SETUP_STREAM(dbg_putchar, NULL, _FDEV_SETUP_WRITE);
 
 #define TX_BUFFER_SIZE 16
 #define RX_BUFFER_SIZE 4
@@ -110,8 +105,6 @@ void debug_init(void) {
     USART0.CTRLA =
         USART_RXCIE_bm | USART_TXCIE_bm | USART_DREIE_bm | USART_RXSIE_bm;
     USART0.CTRLB = USART_TXEN_bm | USART_RXEN_bm;
-
-    stdout = &dbgstdout;
     UNLOCKI();
 }
 
@@ -149,7 +142,7 @@ static inline void dbg_push_tail(uint8_t tail) {
     sei();
 }
 
-static int dbg_putchar(char c, FILE *stream) {
+void debug_putchar(char c) {
     uint8_t newtail = (serial.send.tail + 1) % TX_BUFFER_SIZE;
     if (newtail == serial.send.head) {
         dbg_wait_tx(newtail);
@@ -157,12 +150,62 @@ static int dbg_putchar(char c, FILE *stream) {
 
     serial.send.buf[serial.send.tail] = c;
     dbg_push_tail(newtail);
-
-    return 0;
 }
 
-void debug_putchar(char c) {
-    dbg_putchar(c, NULL);
+void debug_puts_p(const __flash char *str) {
+    for (const __flash char *c = str; *c != '\0'; ++c) {
+        debug_putchar(*c);
+    }
+}
+
+static void putdec_digit(uint8_t d) {
+    debug_putchar('0' + d);
+}
+
+static void putdec_u32(uint32_t u, uint32_t d) {
+    bool prefix = true;
+    for (uint32_t i = d; i > 9; i /= 10) {
+        uint8_t c = 0;
+        while (u >= i) {
+            u -= i;
+            ++c;
+        }
+        if (c == 0 && prefix) {
+            continue;
+        }
+
+        prefix = false;
+        putdec_digit(c);
+    }
+
+    putdec_digit(u);
+}
+
+void debug_putdec_u8(uint8_t u) {
+    putdec_u32(u, 100);
+}
+
+void debug_putdec_u16(uint16_t u) {
+    putdec_u32(u, 10000);
+}
+
+void debug_putdec_u32(uint32_t u) {
+    putdec_u32(u, 1000000000UL);
+}
+
+static void puthex_digit(uint8_t h) {
+    if (h < 0xA) {
+        debug_putchar('0' + h);
+    } else {
+        debug_putchar('A' - 0xA + h);
+    }
+}
+
+void debug_puthex(uint8_t u) {
+    debug_putchar('0');
+    debug_putchar('x');
+    puthex_digit(u >> 4);
+    puthex_digit(u & 0xF);
 }
 
 void debug_write(const char *str, uint8_t len) {
