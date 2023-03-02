@@ -265,6 +265,37 @@ static void loop(void) {
                 LOGNL();
                 break;
             }
+            case TWI_CMD_GET_CALIB: {
+                uint8_t d[6];
+                write_big_endian_u32(d, calib_data.hx711.offset);
+                write_big_endian_u16(d + 4, calib_data.hx711.scale);
+                twi_write(sizeof(d), d);
+                LOGS("GCALIB: ");
+                LOGDEC_U32(calib_data.hx711.offset);
+                LOGS(", ");
+                LOGDEC_U16(calib_data.hx711.scale);
+                LOGNL();
+                break;
+            }
+            case TWI_CMD_SET_CALIB:
+                if (expect_twi_data(6)) {
+                    read_big_endian_u32(&calib_data.hx711.offset, twi_data.buf);
+                    read_big_endian_u16(&calib_data.hx711.scale,
+                                        twi_data.buf + 4);
+                    LOGS("SCALIB: ");
+                    LOGDEC_U32(calib_data.hx711.offset);
+                    LOGS(", ");
+                    LOGDEC_U16(calib_data.hx711.scale);
+                    LOGNL();
+                }
+                break;
+            case TWI_CMD_CALIB_WRITE:
+                if (expect_twi_data(1) &&
+                    twi_data.buf[0] == TWI_CONFIRM_CALIB_WRITE) {
+                    nvm_write_calib_data();
+                    LOGS("WCALIB\n");
+                }
+                break;
             if (twi_data.task != TWI_CMD_MEASURE_WEIGHT &&
                 twi_data.task != TWI_CMD_TRACK_WEIGHT && hx711_is_active()) {
                 hx711_powerdown();
