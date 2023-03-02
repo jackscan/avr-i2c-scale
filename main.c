@@ -296,6 +296,20 @@ static void loop(void) {
                     LOGS("WCALIB\n");
                 }
                 break;
+            case TWI_CMD_SET_ADDR:
+                if (expect_twi_data(1)) {
+                    twi_addr = twi_data.buf[0];
+                }
+                break;
+            case TWI_CMD_ADDR_WRITE:
+                if (expect_twi_data(1) &&
+                    twi_data.buf[0] == TWI_CONFIRM_ADDR_WRITE) {
+                    nvm_write_twi_addr();
+                    LOGS("Addr\n");
+                }
+                break;
+            }
+
             if (twi_data.task != TWI_CMD_MEASURE_WEIGHT &&
                 twi_data.task != TWI_CMD_TRACK_WEIGHT && hx711_is_active()) {
                 hx711_powerdown();
