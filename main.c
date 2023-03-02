@@ -34,6 +34,8 @@
     "." STRINGIFY(VERSION_MINOR) "." STRINGIFY(VERSION_PATCH) " (" STRINGIFY(  \
         GIT_HASH) GIT_DIRTY_SUFFIX ")"
 
+static bool wd_disabled = false;
+
 static void early_init(void) {
     cli();
     // disable digital input on all pins
@@ -170,8 +172,10 @@ static void shutdown(uint8_t mode) {
     sei();
     sleep_cpu();
     sleep_disable();
-    // restart watchdog
-    start_watchdog();
+    if (!wd_disabled) {
+        // restart watchdog
+        start_watchdog();
+    }
     debug_init();
 }
 
@@ -270,6 +274,20 @@ static void loop(void) {
                 break;
             case TWI_CMD_CLOSE_VALVE:
                 close_valve();
+                break;
+            case TWI_CMD_DISABLE_WD:
+                if (expect_twi_data(1) && twi_data.buf[0] == TWI_CONFIRM_DISABLE_WD) {
+                    LOGS("WD_OFF");
+                    wdt_disable();
+                    wd_disabled = true;
+                }
+                break;
+            case TWI_CMD_ENABLE_WD:
+                if (wd_disabled) {
+                    LOGS("WD_ON");
+                    start_watchdog();
+                    wd_disabled = false;
+                }
                 break;
             case TWI_CMD_GET_CALIB: {
                 uint8_t d[6];
