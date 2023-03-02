@@ -12,7 +12,7 @@ void write_big_endian_u16(uint8_t *dst, uint16_t v) {
 
 void write_big_endian_u32(uint8_t *dst, uint32_t v) {
     write_big_endian_u16(dst, v >> 16);
-    write_big_endian_u16(dst, v & 0xFFFF);
+    write_big_endian_u16(dst+2, v & 0xFFFF);
 }
 
 void read_big_endian_u16(uint16_t *dst, uint8_t *src){
