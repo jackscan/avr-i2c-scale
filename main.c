@@ -265,6 +265,12 @@ static void loop(void) {
                 LOGNL();
                 break;
             }
+            case TWI_CMD_OPEN_VALVE:
+                open_valve();
+                break;
+            case TWI_CMD_CLOSE_VALVE:
+                close_valve();
+                break;
             case TWI_CMD_GET_CALIB: {
                 uint8_t d[6];
                 write_big_endian_u32(d, calib_data.hx711.offset);
