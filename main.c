@@ -116,10 +116,8 @@ static int16_t measure_temperature(void) {
     uint32_t temp = adc0_res;
     temp -= offset;
     temp *= gain;
-    int32_t celsius = temp - (((int32_t)273) << 14);
-    celsius >>= 10;
-
-    return (int16_t)celsius;
+    temp >>= 10;
+    return temp - 4370; // Celsius * 16 = K * 16 - 273.15 * 16
 }
 
 static inline uint32_t calculate_weight(uint32_t result) {
