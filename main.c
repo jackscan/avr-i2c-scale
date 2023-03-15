@@ -111,7 +111,7 @@ static int16_t measure_temperature(void) {
     ADC0.CTRLA = 0;
     sei();
 
-    int32_t offset = SIGROW.TEMPSENSE1 * 64;
+    int32_t offset = (int8_t)SIGROW.TEMPSENSE1 * 64L;
     uint8_t gain = SIGROW.TEMPSENSE0;
     uint32_t temp = adc0_res;
     temp -= offset;
