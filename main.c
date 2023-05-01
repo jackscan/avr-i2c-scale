@@ -365,7 +365,7 @@ static void loop(void) {
                 LOGNL();
             } else if (twi_data.task == TWI_CMD_MEASURE_WEIGHT) {
                 buckets_add(w);
-                buckets_dump();
+                // buckets_dump();
                 accu_t r = buckets_filter();
                 uint8_t data[7] = {
                     r.count,
