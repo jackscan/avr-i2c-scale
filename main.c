@@ -224,6 +224,17 @@ static void loop(void) {
                 break;
             }
             case 'd': twi_dump_dbg(); break;
+            case 't': {
+                int16_t t = measure_temperature();
+                int16_t i = t >> 4;
+                uint8_t f = (((t > 0 ? t : -t) & 0xF) * 10) >> 4;
+                LOGS("TEMP: ");
+                LOGDEC(i);
+                LOGC('.');
+                LOGDEC(f);
+                LOGNL();
+                break;
+            }
             default: {
                 LOGS("Invalid: '");
                 LOGC(cmd);
