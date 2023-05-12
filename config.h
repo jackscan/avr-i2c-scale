@@ -9,7 +9,10 @@
 #define VALVE_BIT  (1 << 6)
 
 #define LED_PORT PORTA
-#define LED_BIT (1 << 5)
+#define LED_BIT (1 << 4)
+
+#define LED2_PORT PORTA
+#define LED2_BIT (1 << 5)
 
 #define TXD_PORT PORTB
 #define TXD_BIT (1 << 2)

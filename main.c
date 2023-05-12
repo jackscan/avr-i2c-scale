@@ -50,6 +50,8 @@ static void early_init(void) {
 static void led_init(void) {
     LED_PORT.OUTCLR = LED_BIT;
     LED_PORT.DIRSET = LED_BIT;
+    LED2_PORT.OUTCLR = LED2_BIT;
+    LED2_PORT.DIRSET = LED2_BIT;
 }
 
 static void valve_init(void) {
