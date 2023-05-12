@@ -207,6 +207,11 @@ static bool expect_twi_data(uint8_t count) {
     return true;
 }
 
+static void start_hx711(void) {
+    LED_PORT.OUTSET = LED_BIT;
+    hx711_start();
+}
+
 static void loop(void) {
     for (;;) {
         LOGS("> ");
@@ -214,7 +219,6 @@ static void loop(void) {
         if (twi_task_pending() || debug_char_pending()) {
             wdt_reset();
         }
-        LED_PORT.OUTSET = LED_BIT;
         if (debug_char_pending()) {
             char cmd = debug_getchar();
             switch (cmd) {
@@ -253,7 +257,7 @@ static void loop(void) {
             case TWI_CMD_TRACK_WEIGHT:
                 timer_start();
                 if (!hx711_is_active()) {
-                    hx711_start();
+                    start_hx711();
                     LOGS("TRACK\n");
                 }
                 break;
@@ -261,7 +265,7 @@ static void loop(void) {
                 buckets_reset();
                 LOGS("MEAS\n");
                 if (!hx711_is_active()) {
-                    hx711_start();
+                    start_hx711();
                 }
                 break;
             case TWI_CMD_GET_TEMP: {
@@ -346,6 +350,7 @@ static void loop(void) {
             if (twi_data.task != TWI_CMD_MEASURE_WEIGHT &&
                 twi_data.task != TWI_CMD_TRACK_WEIGHT && hx711_is_active()) {
                 hx711_powerdown();
+                LED_PORT.OUTCLR = LED_BIT;
             }
         }
         if (hx711_is_data_available()) {
@@ -399,8 +404,6 @@ static void loop(void) {
                 LOGNL();
             }
         }
-
-        LED_PORT.OUTCLR = LED_BIT;
     }
 }
 
