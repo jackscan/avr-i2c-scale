@@ -162,6 +162,7 @@ static void shutdown(uint8_t mode) {
     }
 
     LED_PORT.OUTCLR = LED_BIT;
+    close_valve();
 
     // stop watchdog
     wdt_disable();
