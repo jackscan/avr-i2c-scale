@@ -134,11 +134,13 @@ static inline uint32_t calculate_weight(uint32_t result) {
 }
 
 static inline void open_valve(void) {
+    LED2_PORT.OUTSET = LED2_BIT;
     VALVE_PORT.OUTSET = VALVE_BIT;
 }
 
 static inline void close_valve(void) {
     VALVE_PORT.OUTCLR = VALVE_BIT;
+    LED2_PORT.OUTCLR = LED2_BIT;
 }
 
 static inline void start_watchdog(void) {
