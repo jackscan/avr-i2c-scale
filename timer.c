@@ -11,29 +11,29 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
-static void wait_for(uint8_t bm) {
+static void wait_while(uint8_t bm) {
     while ((RTC.STATUS & bm) != 0) {
     }
 }
 
 void timer_init(void) {
     // Wait for registers to synchronize
-    wait_for(0xFF);
+    wait_while(0xFF);
 
     RTC.PER = 0xffff;
     RTC.CLKSEL = RTC_CLKSEL_INT32K_gc;
 }
 
 void timer_start(void) {
-    wait_for(RTC_CTRLABUSY_bm);
+    wait_while(RTC_CTRLABUSY_bm);
     RTC.CTRLA = RTC_PRESCALER_DIV32_gc;
-    wait_for(RTC_CNTBUSY_bm | RTC_CTRLABUSY_bm);
+    wait_while(RTC_CNTBUSY_bm | RTC_CTRLABUSY_bm);
     RTC.CNT = 0;
     RTC.CTRLA |= RTC_RTCEN_bm | RTC_RUNSTDBY_bm;
 }
 
 void timer_stop(void) {
-    wait_for(RTC_CTRLABUSY_bm);
+    wait_while(RTC_CTRLABUSY_bm);
     RTC.CTRLA = 0;
 }
 
