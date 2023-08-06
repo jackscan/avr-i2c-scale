@@ -47,13 +47,6 @@ static void early_init(void) {
     }
 }
 
-static void led_init(void) {
-    LED_PORT.OUTCLR = LED_BIT;
-    LED_PORT.DIRSET = LED_BIT;
-    LED2_PORT.OUTCLR = LED2_BIT;
-    LED2_PORT.DIRSET = LED2_BIT;
-}
-
 static void valve_init(void) {
     // Set valve pin low
     VALVE_PORT.OUTCLR = VALVE_BIT;
@@ -134,13 +127,11 @@ static inline uint32_t calculate_weight(uint32_t result) {
 }
 
 static inline void open_valve(void) {
-    LED2_PORT.OUTSET = LED2_BIT;
     VALVE_PORT.OUTSET = VALVE_BIT;
 }
 
 static inline void close_valve(void) {
     VALVE_PORT.OUTCLR = VALVE_BIT;
-    LED2_PORT.OUTCLR = LED2_BIT;
 }
 
 static inline void start_watchdog(void) {
@@ -165,7 +156,6 @@ static void shutdown(uint8_t mode) {
         debug_prepare_standby();
     }
 
-    LED_PORT.OUTCLR = LED_BIT;
     close_valve();
     timer_stop();
 
@@ -214,7 +204,6 @@ static bool expect_twi_data(uint8_t count) {
 }
 
 static void start_hx711(void) {
-    LED_PORT.OUTSET = LED_BIT;
     hx711_start();
 }
 
@@ -356,7 +345,6 @@ static void loop(void) {
             if (twi_data.task != TWI_CMD_MEASURE_WEIGHT &&
                 twi_data.task != TWI_CMD_TRACK_WEIGHT && hx711_is_active()) {
                 hx711_powerdown();
-                LED_PORT.OUTCLR = LED_BIT;
                 timer_stop();
             }
         }
@@ -428,7 +416,6 @@ int main(void) {
     // init
     {
         valve_init();
-        led_init();
         hx711_init();
         debug_init();
         nvm_init();
