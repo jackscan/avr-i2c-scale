@@ -167,6 +167,7 @@ static void shutdown(uint8_t mode) {
 
     LED_PORT.OUTCLR = LED_BIT;
     close_valve();
+    timer_stop();
 
     // stop watchdog
     wdt_disable();
@@ -356,6 +357,7 @@ static void loop(void) {
                 twi_data.task != TWI_CMD_TRACK_WEIGHT && hx711_is_active()) {
                 hx711_powerdown();
                 LED_PORT.OUTCLR = LED_BIT;
+                timer_stop();
             }
         }
         if (hx711_is_data_available()) {
