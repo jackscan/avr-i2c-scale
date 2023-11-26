@@ -25,6 +25,13 @@
 #define SCK_PORT PORTA
 #define SCK_BIT  (1 << 3)
 
+#define STEPPER_PORT PORTA
+#define STEPPER_BIT1 (1 << 1)
+#define STEPPER_BIT2 (1 << 4)
+#define STEPPER_BIT3 (1 << 5)
+#define STEPPER_BIT4 (1 << 7)
+#define STEPPER_MASK (STEPPER_BIT1 | STEPPER_BIT2 | STEPPER_BIT3 | STEPPER_BIT4)
+
 // #define UPDI  PA0
 // #define SDA   PB1
 // #define SCL   PB0
@@ -35,3 +42,7 @@
 // #define VALVE PA6
 // #define RXD   PB3
 // #define TXD   PB2
+// #define STP1  PA1
+// #define STP2  PA4
+// #define STP3  PA5
+// #define STP4  PA7
