@@ -18,7 +18,6 @@
 #include <avr/pgmspace.h>
 #include <avr/sleep.h>
 #include <avr/wdt.h>
-#include <util/delay.h>
 
 #if GIT_DIRTY
 #define GIT_DIRTY_SUFFIX "-dirty"
