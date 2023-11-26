@@ -86,6 +86,7 @@ static inline void twi_update_crc(uint8_t val) {
 static inline void prepare_recv(void) {
     switch (twi.cmd) {
     case TWI_CMD_SET_CALIB: twi.count = sizeof(calib_data); break;
+    case TWI_CMD_ROTATE: twi.count = 2; break;
     case TWI_CMD_CALIB_WRITE: // fallthrough
     case TWI_CMD_SET_ADDR:    // fallthrough
     case TWI_CMD_ADDR_WRITE:  // fallthrough

@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "hx711.h"
 #include "nvm.h"
+#include "stepper.h"
 #include "timer.h"
 #include "twi.h"
 #include "version.h"
@@ -51,6 +52,11 @@ static void valve_init(void) {
     VALVE_PORT.OUTCLR = VALVE_BIT;
     // Set valve pin as output
     VALVE_PORT.DIRSET = VALVE_BIT;
+}
+
+static void init_twi_addr(void) {
+    stepper_init((twi_addr & 1) != 0);
+    twi_init(twi_addr);
 }
 
 static volatile uint16_t adc0_res;
@@ -257,6 +263,18 @@ static void loop(void) {
             case TWI_CMD_CLOSE_VALVE:
                 close_valve();
                 break;
+            case TWI_CMD_ROTATE:
+                if (expect_twi_data(2)) {
+                    uint8_t cycles = twi_data.buf[0];
+                    uint8_t maxspd = twi_data.buf[1];
+                    LOGS("R ");
+                    LOGDEC(cycles);
+                    LOGC(' ');
+                    LOGDEC(maxspd);
+                    LOGNL();
+                    stepper_rotate(cycles, maxspd);
+                }
+                break;
             case TWI_CMD_DISABLE_WD:
                 if (expect_twi_data(1) && twi_data.buf[0] == TWI_CONFIRM_DISABLE_WD) {
                     LOGS("W0\n");
@@ -305,6 +323,7 @@ static void loop(void) {
             case TWI_CMD_SET_ADDR:
                 if (expect_twi_data(1)) {
                     twi_addr = twi_data.buf[0];
+                    init_twi_addr();
                 }
                 break;
             case TWI_CMD_ADDR_WRITE:
@@ -393,7 +412,7 @@ int main(void) {
         hx711_init();
         debug_init();
         nvm_init();
-        twi_init(twi_addr);
+        init_twi_addr();
         timer_init();
         buckets_init(1);
         sei();
