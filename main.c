@@ -214,50 +214,25 @@ static void loop(void) {
             wdt_reset();
         }
         if (debug_char_pending()) {
-            char cmd = debug_getchar();
-            switch (cmd) {
-            case 's': {
-                LOGS("Stdby\n");
-                shutdown(SLEEP_MODE_STANDBY);
-                break;
-            }
-            case 'd': twi_dump_dbg(); break;
-            case 't': {
-                int16_t t = measure_temperature();
-                int16_t i = t >> 4;
-                uint8_t f = (((t > 0 ? t : -t) & 0xF) * 10) >> 4;
-                LOGS("TEMP: ");
-                LOGDEC(i);
-                LOGC('.');
-                LOGDEC(f);
-                LOGNL();
-                break;
-            }
-            default: {
-                LOGS("Invalid: '");
-                LOGC(cmd);
-                LOGS("'\n");
-                break;
-            }
-            }
+            debug_getchar();
         }
         if (twi_task_pending()) {
             twi_read(&twi_data);
             switch (twi_data.task) {
             case TWI_CMD_SLEEP:
-                LOGS("SLP\n");
+                LOGS("S\n");
                 shutdown(SLEEP_MODE_PWR_DOWN);
                 break;
             case TWI_CMD_TRACK_WEIGHT:
                 timer_start();
                 if (!hx711_is_active()) {
                     start_hx711();
-                    LOGS("TRACK\n");
+                    LOGS("WT\n");
                 }
                 break;
             case TWI_CMD_MEASURE_WEIGHT:
                 buckets_reset();
-                LOGS("MEAS\n");
+                LOGS("M\n");
                 if (!hx711_is_active()) {
                     start_hx711();
                 }
@@ -269,7 +244,7 @@ static void loop(void) {
                 twi_write(sizeof(d), d);
                 int16_t i = t >> 4;
                 uint8_t f = (((t > 0 ? t : -t) & 0xF) * 10) >> 4;
-                LOGS("TEMP: ");
+                LOGS("T: ");
                 LOGDEC(i);
                 LOGC('.');
                 LOGDEC(f);
@@ -284,14 +259,14 @@ static void loop(void) {
                 break;
             case TWI_CMD_DISABLE_WD:
                 if (expect_twi_data(1) && twi_data.buf[0] == TWI_CONFIRM_DISABLE_WD) {
-                    LOGS("WD_OFF");
+                    LOGS("W0\n");
                     wdt_disable();
                     wd_disabled = true;
                 }
                 break;
             case TWI_CMD_ENABLE_WD:
                 if (wd_disabled) {
-                    LOGS("WD_ON");
+                    LOGS("W1\n");
                     start_watchdog();
                     wd_disabled = false;
                 }
@@ -301,7 +276,7 @@ static void loop(void) {
                 write_big_endian_u32(d, calib_data.hx711.offset);
                 write_big_endian_u16(d + 4, calib_data.hx711.scale);
                 twi_write(sizeof(d), d);
-                LOGS("GCALIB: ");
+                LOGS("GCAL: ");
                 LOGDEC_U32(calib_data.hx711.offset);
                 LOGS(", ");
                 LOGDEC_U16(calib_data.hx711.scale);
@@ -313,7 +288,7 @@ static void loop(void) {
                     read_big_endian_u32(&calib_data.hx711.offset, twi_data.buf);
                     read_big_endian_u16(&calib_data.hx711.scale,
                                         twi_data.buf + 4);
-                    LOGS("SCALIB: ");
+                    LOGS("SCAL: ");
                     LOGDEC_U32(calib_data.hx711.offset);
                     LOGS(", ");
                     LOGDEC_U16(calib_data.hx711.scale);
@@ -324,7 +299,7 @@ static void loop(void) {
                 if (expect_twi_data(1) &&
                     twi_data.buf[0] == TWI_CONFIRM_CALIB_WRITE) {
                     nvm_write_calib_data();
-                    LOGS("WCALIB\n");
+                    LOGS("WCAL\n");
                 }
                 break;
             case TWI_CMD_SET_ADDR:
@@ -336,7 +311,7 @@ static void loop(void) {
                 if (expect_twi_data(1) &&
                     twi_data.buf[0] == TWI_CONFIRM_ADDR_WRITE) {
                     nvm_write_twi_addr();
-                    LOGS("Addr\n");
+                    LOGS("WADR\n");
                 }
                 break;
             }
