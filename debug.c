@@ -201,10 +201,19 @@ static void puthex_digit(uint8_t h) {
     }
 }
 
-void debug_puthex(uint8_t u) {
+void debug_puthex_u8(uint8_t u) {
     debug_putchar('0');
     debug_putchar('x');
     puthex_digit(u >> 4);
+    puthex_digit(u & 0xF);
+}
+
+void debug_puthex_u16(uint16_t u) {
+    debug_putchar('0');
+    debug_putchar('x');
+    puthex_digit((u >> 12) & 0xF);
+    puthex_digit((u >> 8) & 0xF);
+    puthex_digit((u >> 4) & 0xF);
     puthex_digit(u & 0xF);
 }
 
@@ -320,13 +329,14 @@ void debug_init_trace(void) {
 
 void debug_dump_trace(void) {
     if ((s_trace.index & 1) == 0 && s_trace.index < sizeof(s_trace.addr)) {
-        LOG("trace:");
+        LOGS("trace:");
         uint8_t i = s_trace.index / 2;
         do {
+            LOGC(' ');
             i = (i + 1) % TRACE_LEN;
-            LOG(" %#x", s_trace.addr[i] * 2);
+            LOGHEX_U16(s_trace.addr[i] * 2);
         } while (i * 2 != s_trace.index);
-        LOG("\n");
+        LOGNL();
     }
 }
 #endif

@@ -20,7 +20,8 @@ void debug_puts_p(const __flash char *str);
 void debug_putdec_u8(uint8_t u);
 void debug_putdec_u16(uint16_t u);
 void debug_putdec_u32(uint32_t u);
-void debug_puthex(uint8_t u);
+void debug_puthex_u8(uint8_t u);
+void debug_puthex_u16(uint16_t u);
 void debug_finish(void);
 void debug_prepare_standby(void);
 void debug_stop(void);
@@ -28,7 +29,8 @@ void debug_stop(void);
 #define LOGS(MSG)     debug_puts_p(FSTR(MSG))
 #define LOGC(C)       debug_putchar(C)
 #define LOGNL()       debug_putchar('\n')
-#define LOGHEX(N)     debug_puthex(N)
+#define LOGHEX(N)     debug_puthex_u8(N)
+#define LOGHEX_U16(N) debug_puthex_u16(N)
 #define LOGDEC(N)     debug_putdec_u8(N)
 #define LOGDEC_U16(N) debug_putdec_u16(N)
 #define LOGDEC_U32(N) debug_putdec_u32(N)
