@@ -428,7 +428,7 @@ int main(void) {
     LOGS("ADDR: ");
     LOGHEX(twi_addr);
     LOGNL();
-    shutdown(SLEEP_MODE_STANDBY);
+    shutdown(SLEEP_MODE_PWR_DOWN);
     loop();
 
     return 0; /* never reached */
