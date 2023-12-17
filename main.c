@@ -200,7 +200,7 @@ struct twi_data twi_data = {.task = TWI_CMD_NONE, .count = 0};
 static bool expect_twi_data(uint8_t count) {
     if (twi_data.count != count) {
         LOGHEX(twi_data.task);
-        LOGS(": invalid: ");
+        LOGS(": inv: ");
         LOGDEC(twi_data.count);
         LOGNL();
         return false;
@@ -344,9 +344,9 @@ static void loop(void) {
         if (hx711_is_data_available()) {
             uint32_t d = hx711_read();
             uint32_t w = calculate_weight(d);
-            LOGS("w: ");
+            LOGS("w:");
             LOGDEC_U32(w);
-            LOGS(" (");
+            LOGC('(');
             LOGDEC_U32(d);
             LOGS(")\n");
             if (twi_data.task == TWI_CMD_TRACK_WEIGHT) {
@@ -362,9 +362,9 @@ static void loop(void) {
                     t & 0xFF,
                 };
                 twi_write(6, data);
-                LOGS("t: ");
+                LOGS("t:");
                 LOGDEC(t);
-                LOGS(", ");
+                LOGC(' ');
                 LOGDEC_U16(rt);
                 LOGNL();
             } else if (twi_data.task == TWI_CMD_MEASURE_WEIGHT) {
@@ -381,13 +381,13 @@ static void loop(void) {
                     r.span,
                 };
                 twi_write(7, data);
-                LOGS("c: ");
+                LOGS("c:");
                 LOGDEC_U32(r.sum);
-                LOGS(", ");
+                LOGC(' ');
                 LOGDEC(r.count);
                 LOGC('/');
                 LOGDEC(r.total);
-                LOGS(", ");
+                LOGC(' ');
                 LOGDEC(r.span);
                 LOGNL();
             }
@@ -425,7 +425,7 @@ int main(void) {
     LOGS("rst: ");
     LOGHEX(rstfr);
     LOGNL();
-    LOGS("ADDR: ");
+    LOGS("ADR: ");
     LOGHEX(twi_addr);
     LOGNL();
     shutdown(SLEEP_MODE_PWR_DOWN);
