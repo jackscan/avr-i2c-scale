@@ -174,12 +174,23 @@ static void shutdown(uint8_t mode) {
     debug_init();
 }
 
+static uint8_t last_stepper_cycle = 0;
+
+static bool stepper_has_new_cycle(void) {
+    uint8_t c = stepper_get_cycle();
+    if (c == last_stepper_cycle) {
+        return false;
+    }
+    last_stepper_cycle = c;
+    return true;
+}
+
 static void wait_for_input(void) {
     cli();
     set_sleep_mode(SLEEP_MODE_IDLE);
     sleep_enable();
     while (!twi_task_pending() && !hx711_is_data_available() &&
-           !debug_char_pending()) {
+           !debug_char_pending() && !stepper_has_new_cycle()) {
         sei();
         sleep_cpu();
         cli();
@@ -212,7 +223,7 @@ static void loop(void) {
     for (;;) {
         LOGS("> ");
         wait_for_input();
-        if (twi_task_pending() || debug_char_pending()) {
+        if (stepper_is_running() || twi_task_pending() || debug_char_pending()) {
             wdt_reset();
         }
         if (debug_char_pending()) {
@@ -339,6 +350,11 @@ static void loop(void) {
                 timer_stop();
             }
         }
+        if (twi_data.task == TWI_CMD_ROTATE) {
+            last_stepper_cycle = stepper_get_cycle();
+            twi_write(1, &last_stepper_cycle);
+        }
+
         if (hx711_is_data_available()) {
             uint32_t d = hx711_read();
             uint32_t w = calculate_weight(d);
