@@ -54,11 +54,6 @@ static void valve_init(void) {
     VALVE_PORT.DIRSET = VALVE_BIT;
 }
 
-static void init_twi_addr(void) {
-    stepper_init((twi_addr & 1) != 0);
-    twi_init(twi_addr);
-}
-
 static volatile uint16_t adc0_res;
 
 ISR(ADC0_RESRDY_vect) {
@@ -266,14 +261,16 @@ static void loop(void) {
                 break;
             case TWI_CMD_ROTATE:
                 if (expect_twi_data(2)) {
-                    uint8_t cycles = twi_data.buf[0];
+                    bool dir = (twi_data.buf[0] & 0x80) != 0;
+                    uint8_t cycles = (twi_data.buf[0] & 0x7F) + 1;
                     uint8_t maxspd = twi_data.buf[1];
                     LOGS("R ");
+                    LOGC((dir ? '+' : '-'));
                     LOGDEC(cycles);
                     LOGC(' ');
                     LOGDEC(maxspd);
                     LOGNL();
-                    stepper_rotate(cycles, maxspd);
+                    stepper_rotate(dir, cycles, maxspd);
                 }
                 break;
             case TWI_CMD_DISABLE_WD:
@@ -324,7 +321,7 @@ static void loop(void) {
             case TWI_CMD_SET_ADDR:
                 if (expect_twi_data(1)) {
                     twi_addr = twi_data.buf[0];
-                    init_twi_addr();
+                    twi_init(twi_addr);
                 }
                 break;
             case TWI_CMD_ADDR_WRITE:
@@ -413,7 +410,8 @@ int main(void) {
         hx711_init();
         debug_init();
         nvm_init();
-        init_twi_addr();
+        twi_init(twi_addr);
+        stepper_init();
         timer_init();
         buckets_init(1);
         sei();

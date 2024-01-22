@@ -94,8 +94,7 @@ ISR(TCA0_OVF_vect) {
     TCA0.SINGLE.INTFLAGS = TCA_SINGLE_OVF_bm;
 }
 
-void stepper_init(bool dir) {
-    stepper.dir = dir ? 1 : -1;
+void stepper_init(void) {
     STEPPER_PORT.OUTCLR = STEPPER_MASK;
     STEPPER_PORT.DIRSET = STEPPER_MASK;
 }
@@ -121,7 +120,7 @@ static void stepper_calc_shift_ramp(uint32_t r) {
     stepper.shift = s;
 }
 
-void stepper_rotate(uint8_t cycles, uint8_t maxspd) {
+void stepper_rotate(bool dir, uint8_t cycles, uint8_t maxspd) {
 
     TCA0.SINGLE.INTCTRL = TCA_SINGLE_OVF_bm;
     TCA0.SINGLE.CNT = 0;
@@ -132,6 +131,7 @@ void stepper_rotate(uint8_t cycles, uint8_t maxspd) {
     stepper.pmin = UINT16_MAX;
 
     stepper.step = 0;
+    stepper.dir = dir ? 1 : -1;
     stepper.total_steps = cycles << 3;
 
     uint32_t minpt = 600UL * (255UL + 16UL) / (maxspd + 16UL);
