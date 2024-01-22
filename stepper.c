@@ -184,3 +184,13 @@ void stepper_stop(void)
     // Disable all bits
     STEPPER_PORT.OUTCLR = STEPPER_MASK;
 }
+
+bool stepper_is_running(void)
+{
+    return TCA0.SINGLE.CTRLA != 0;
+}
+
+uint8_t stepper_get_cycle(void)
+{
+    return (uint8_t)(stepper.step >> 3);
+}

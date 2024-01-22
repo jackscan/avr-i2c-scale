@@ -22,3 +22,17 @@ void stepper_rotate(bool dir, uint8_t cycles, uint8_t maxspd);
  * @brief Stop any running rotation.
  */
 void stepper_stop(void);
+
+/**
+ * @brief Check whether motor is currently running.
+ *
+ * @return true iff stepper motor is running.
+ */
+bool stepper_is_running(void);
+
+/**
+ * @brief Get current step.
+ *
+ * @return Current number of full steps done.
+ */
+uint8_t stepper_get_cycle(void);
