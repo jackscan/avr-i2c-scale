@@ -37,10 +37,14 @@ bool buckets_empty(void) {
     return buckets.upper == 0;
 }
 
+static void buckets_merge(int8_t dst, int8_t src0) {
+    buckets.accu[dst] = buckets.accu[src0] + buckets.accu[src0 + 1];
+    buckets.count[dst] = buckets.count[src0] + buckets.count[src0 + 1];
+}
+
 void buckets_deflate(void) {
     for (int8_t i = 0, j = 0; i + 1 < buckets.upper; ++j, i += 2) {
-        buckets.accu[j] = buckets.accu[i] + buckets.accu[i + 1];
-        buckets.count[j] = buckets.count[i] + buckets.count[i + 1];
+        buckets_merge(j, i);
     }
 
     if ((buckets.upper & 0x1) != 0) {
@@ -52,8 +56,7 @@ void buckets_deflate(void) {
 
     for (int8_t i = BUCKET_COUNT - 1, j = i; i - 1 >= buckets.lower;
          --j, i -= 2) {
-        buckets.accu[j] = buckets.accu[i] + buckets.accu[i - 1];
-        buckets.count[j] = buckets.count[i] + buckets.count[i - 1];
+        buckets_merge(j, i - 1);
     }
 
     if ((buckets.lower & 0x1) != 0) {
