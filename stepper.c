@@ -173,3 +173,13 @@ void stepper_rotate(uint8_t cycles, uint8_t maxspd) {
 
     TCA0.SINGLE.CTRLA = TCA_CLKSEL | TCA_SINGLE_ENABLE_bm;
 }
+
+void stepper_stop(void)
+{
+    // Disable interrupt
+    TCA0.SINGLE.INTCTRL = 0;
+    // Disable timer
+    TCA0.SINGLE.CTRLA = 0;
+    // Disable all bits
+    STEPPER_PORT.OUTCLR = STEPPER_MASK;
+}

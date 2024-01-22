@@ -16,3 +16,8 @@ void stepper_init(bool dir);
  * @param ramp8ms maximum speed to ramp up to
  */
 void stepper_rotate(uint8_t cycles, uint8_t maxspd);
+
+/**
+ * @brief Stop any running rotation.
+ */
+void stepper_stop(void);

@@ -150,6 +150,7 @@ static inline void start_watchdog(void) {
 }
 
 static void shutdown(uint8_t mode) {
+    stepper_stop();
     if (mode == SLEEP_MODE_IDLE) {
         debug_finish();
     } else {
