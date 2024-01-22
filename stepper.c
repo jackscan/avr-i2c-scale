@@ -29,7 +29,7 @@ struct {
     uint32_t total_steps;
     /// Duration of ramp up/down phase.
     uint16_t ramp;
-    /// Minimum step period.
+    /// Minimum step period in timer ticks (CLKDIV/F_CPU seconds).
     uint16_t minp;
     /// Number of bits ramp is right-shifted compared to t.
     uint8_t shift;
@@ -134,9 +134,10 @@ void stepper_rotate(bool dir, uint8_t cycles, uint8_t maxspd) {
     stepper.dir = dir ? 1 : -1;
     stepper.total_steps = cycles << 3;
 
+    // Minimum period in microseconds
     uint32_t minpt = 600UL * (255UL + 16UL) / (maxspd + 16UL);
     // const uint32_t DIV_MS = 1000UL * CLKDIV;
-    stepper.minp = ((F_CPU / DIV_MS) * minpt + DIV_MS - 1) / DIV_MS;
+    stepper.minp = ((F_CPU / DIV_MS) * minpt + 1000UL - 1UL) / 1000UL;
     // uint32_t maxp = (F_CPU * 11UL + DIV_MS - 1) / DIV_MS;
     stepper.t = 0;
 
