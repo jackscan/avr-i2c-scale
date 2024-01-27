@@ -145,6 +145,7 @@ static inline void start_watchdog(void) {
 }
 
 static void shutdown(uint8_t mode) {
+    CHECKPOINT;
     stepper_stop();
     if (mode == SLEEP_MODE_IDLE) {
         debug_finish();
@@ -167,6 +168,7 @@ static void shutdown(uint8_t mode) {
     sei();
     sleep_cpu();
     sleep_disable();
+    CHECKPOINT;
     if (!wd_disabled) {
         // restart watchdog
         start_watchdog();
@@ -222,8 +224,11 @@ static void start_hx711(void) {
 static void loop(void) {
     for (;;) {
         LOGS("> ");
+        CHECKPOINT;
         wait_for_input();
+        CHECKPOINT;
         if (stepper_is_running() || twi_task_pending() || debug_char_pending()) {
+            CHECKPOINT;
             wdt_reset();
         }
         if (debug_char_pending()) {

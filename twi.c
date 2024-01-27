@@ -283,6 +283,7 @@ bool twi_busy(void) {
 }
 
 static bool twi_prepare_load(uint8_t count) {
+    CHECKPOINT;
     cli();
     set_sleep_mode(SLEEP_MODE_IDLE);
     sleep_enable();
@@ -315,6 +316,7 @@ void twi_write_P(uint8_t count, const __flash uint8_t *data) {
 }
 
 void twi_read(struct twi_data *data) {
+    CHECKPOINT;
     data->task = TWI_CMD_NONE;
     data->count = 0;
     cli();

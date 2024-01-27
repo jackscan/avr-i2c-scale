@@ -5,7 +5,7 @@ CLOCK      = 3333333UL
 
 OBJECTS    = main.o debug.o hx711.o buckets.o twi.o nvm.o timer.o stepper.o util.o
 
-DEFINES    = -DF_CPU=$(CLOCK) -DNDEBUG
+DEFINES    = -DF_CPU=$(CLOCK) -DNDEBUG -DENABLE_CHECKPOINTS=1
 
 TARGET     = i2c-scale
 
