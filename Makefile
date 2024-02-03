@@ -41,7 +41,8 @@ version.h: version.h.tmp
 	$(COMPILE) -S $< -o $@
 
 flash: $(TARGET).hex
-	$(PYMCUPROG) write -f $< --erase
+	$(PYMCUPROG) erase -m flash
+	$(PYMCUPROG) write -f $<
 
 ping:
 	$(PYMCUPROG) ping
