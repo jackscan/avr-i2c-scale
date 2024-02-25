@@ -16,9 +16,11 @@
 
 #define CLKDIV     1UL
 #define DIV_MS     (1000UL * CLKDIV)
+#define DIV_US     (1000000UL * CLKDIV)
 #define TCA_CLKSEL TCA_SINGLE_CLKSEL_DIV1_gc
-#define MINP       ((F_CPU * 600UL + 1000000UL * CLKDIV - 1) / (1000000UL * CLKDIV))
-#define MAXP       ((F_CPU * 11UL + DIV_MS - 1) / DIV_MS)
+#define MINP       ((F_CPU * 38UL + DIV_US - 1) / DIV_US)
+#define MAXP       ((F_CPU * 19UL + DIV_MS - 1) / DIV_MS)
+#define STP_HIGH_P ((F_CPU * 1UL + DIV_US - 1) / DIV_US)
 
 struct {
     /// Time since start or time to end in units of CLKDIV/F_CPU seconds.
@@ -35,23 +37,10 @@ struct {
     uint8_t shift;
     /// Stepper direction is either 1 or -1.
     int8_t dir;
-    uint16_t pmin;
-    uint32_t tmin;
 } stepper;
 
-static const __flash uint8_t stepper_bits[4] = {STEPPER_BIT1, STEPPER_BIT2,
-                                                STEPPER_BIT3, STEPPER_BIT4};
 
 ISR(TCA0_OVF_vect) {
-    uint8_t step = (stepper.dir > 0 ? stepper.step : 1 - stepper.step) & 0x7;
-    uint8_t s = step >> 1;
-
-    if (((step & 1) == 0) == (stepper.dir > 0)) {
-        STEPPER_PORT.OUTSET = stepper_bits[s];
-    } else {
-        STEPPER_PORT.OUTCLR = stepper_bits[(s - stepper.dir) & 3];
-    }
-
     // period for next step
     uint16_t p = stepper.minp;
     uint32_t t = stepper.t >> stepper.shift;
@@ -72,10 +61,6 @@ ISR(TCA0_OVF_vect) {
         int32_t mid = stepper.total_steps / 2;
         if (stepper.step + 1 < mid) {
             stepper.t += p;
-            if (stepper.pmin > p) {
-                stepper.pmin = p;
-                stepper.tmin = stepper.t;
-            }
         } else if (stepper.t > p) {
             stepper.t -= p;
         } else {
@@ -86,8 +71,10 @@ ISR(TCA0_OVF_vect) {
         TCA0.SINGLE.INTCTRL = 0;
         // Disable timer
         TCA0.SINGLE.CTRLA = 0;
-        // Disable all bits
-        STEPPER_PORT.OUTCLR = STEPPER_MASK;
+        // Disable timer B
+        TCB0.CTRLA = 0;
+        // Disable stepper driver
+        STP_NSLP_PORT.OUTCLR = STP_NSLP_BIT;
     }
 
     // Clear interrupt flag
@@ -95,8 +82,12 @@ ISR(TCA0_OVF_vect) {
 }
 
 void stepper_init(void) {
-    STEPPER_PORT.OUTCLR = STEPPER_MASK;
-    STEPPER_PORT.DIRSET = STEPPER_MASK;
+    STP_NSLP_PORT.OUTCLR = STP_NSLP_BIT;
+    STP_NSLP_PORT.DIRSET = STP_NSLP_BIT;
+    STP_STEP_PORT.OUTCLR = STP_STEP_BIT;
+    STP_STEP_PORT.DIRSET = STP_STEP_BIT;
+    STP_DIR_PORT.OUTCLR = STP_DIR_BIT;
+    STP_DIR_PORT.DIRSET = STP_DIR_BIT;
 }
 
 static uint32_t stepper_period(uint32_t x) {
@@ -122,20 +113,30 @@ static void stepper_calc_shift_ramp(uint32_t r) {
 
 void stepper_rotate(bool dir, uint8_t cycles, uint8_t maxspd) {
 
+    if (dir) {
+        STP_DIR_PORT.OUTSET = STP_DIR_BIT;
+    } else {
+        STP_DIR_PORT.OUTCLR = STP_DIR_BIT;
+    }
+
+    // Enable stepper driver
+    STP_NSLP_PORT.OUTSET = STP_NSLP_BIT;
+
     TCA0.SINGLE.INTCTRL = TCA_SINGLE_OVF_bm;
     TCA0.SINGLE.CNT = 0;
-    // Timer period is calculated in interrupt.
-    // Set short period for triggering first interrupt.
-    TCA0.SINGLE.PERBUF = MINP;
+    TCA0.SINGLE.CMP0 = STP_HIGH_P;
 
-    stepper.pmin = UINT16_MAX;
+    // Set initial period to 1ms for first step pulse in order to
+    // allow stepper driver charge pump to stabalize.
+    // Subsequent timer periods are calculated in interrupt.
+    TCA0.SINGLE.PERBUF = ((F_CPU * 1UL + DIV_MS - 1) / DIV_MS);
 
     stepper.step = 0;
     stepper.dir = dir ? 1 : -1;
-    stepper.total_steps = cycles << 3;
+    stepper.total_steps = cycles << (3 + 4);
 
     // Minimum period in microseconds
-    uint32_t minpt = 600UL * (255UL + 16UL) / (maxspd + 16UL);
+    uint32_t minpt = 38UL * (255UL + 16UL) / (maxspd + 16UL);
     // const uint32_t DIV_MS = 1000UL * CLKDIV;
     stepper.minp = ((F_CPU / DIV_MS) * minpt + 1000UL - 1UL) / 1000UL;
     // uint32_t maxp = (F_CPU * 11UL + DIV_MS - 1) / DIV_MS;
@@ -172,6 +173,14 @@ void stepper_rotate(bool dir, uint8_t cycles, uint8_t maxspd) {
     LOGDEC_U16(stepper.minp);
     LOGNL();
 
+    // Configure TCB0 for waveform output
+    TCB0.CCMP = STP_HIGH_P;
+    // Enable waveform output and configure single-shot mode
+    TCB0.CTRLB = TCB_CCMPEN_bm | TCB_CNTMODE_SINGLE_gc;
+    // Synchronize with TCA0 and enable timer
+    TCB0.CTRLA = TCB_SYNCUPD_bm | TCB_CLKSEL_CLKTCA_gc | TCB_ENABLE_bm;
+
+    // Start TCA0
     TCA0.SINGLE.CTRLA = TCA_CLKSEL | TCA_SINGLE_ENABLE_bm;
 }
 
@@ -181,8 +190,10 @@ void stepper_stop(void)
     TCA0.SINGLE.INTCTRL = 0;
     // Disable timer
     TCA0.SINGLE.CTRLA = 0;
-    // Disable all bits
-    STEPPER_PORT.OUTCLR = STEPPER_MASK;
+    // Put driver to sleep
+    STP_NSLP_PORT.OUTCLR = STP_NSLP_BIT;
+    // Set step pin to defined level
+    STP_STEP_PORT.OUTCLR = STP_STEP_BIT;
 }
 
 bool stepper_is_running(void)
