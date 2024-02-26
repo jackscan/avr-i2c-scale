@@ -165,8 +165,12 @@ static void shutdown(uint8_t mode) {
     wdt_disable();
     set_sleep_mode(mode);
     sleep_enable();
-    sei();
-    sleep_cpu();
+    if (!twi_busy()) {
+        sei();
+        sleep_cpu();
+    } else {
+        sei();
+    }
     sleep_disable();
     CHECKPOINT;
     if (!wd_disabled) {
