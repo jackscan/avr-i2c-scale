@@ -178,6 +178,8 @@ void hx711_powerdown(void) {
         MISO_PINCTRL = PORT_ISC_INPUT_DISABLE_gc;
 
         // Start timer to wait 60us for hx711 to enter power down mode
+        // First disable timer for configuration
+        TCB0.CTRLA = 0;
         // Periodic interrupt mode
         TCB0.CTRLB = TCB_CNTMODE_INT_gc;
         // Calculate timer ticks for 60us while running with CLKDIV2
