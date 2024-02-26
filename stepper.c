@@ -41,6 +41,7 @@ struct {
 
 
 ISR(TCA0_OVF_vect) {
+    STP_STEP_PORT.OUTSET = STP_STEP_BIT;
     // period for next step
     uint16_t p = stepper.minp;
     uint32_t t = stepper.t >> stepper.shift;
@@ -53,7 +54,7 @@ ISR(TCA0_OVF_vect) {
     }
 
     // Are total steps reached?
-    if (stepper.step <= stepper.total_steps) {
+    if (stepper.step < stepper.total_steps) {
         TCA0.SINGLE.PERBUF = p;
         ++stepper.step;
 
@@ -71,14 +72,13 @@ ISR(TCA0_OVF_vect) {
         TCA0.SINGLE.INTCTRL = 0;
         // Disable timer
         TCA0.SINGLE.CTRLA = 0;
-        // Disable timer B
-        TCB0.CTRLA = 0;
         // Disable stepper driver
         STP_NSLP_PORT.OUTCLR = STP_NSLP_BIT;
     }
-
     // Clear interrupt flag
     TCA0.SINGLE.INTFLAGS = TCA_SINGLE_OVF_bm;
+
+    STP_STEP_PORT.OUTCLR = STP_STEP_BIT;
 }
 
 void stepper_init(void) {
@@ -112,6 +112,8 @@ static void stepper_calc_shift_ramp(uint32_t r) {
 }
 
 void stepper_rotate(bool dir, uint8_t cycles, uint8_t maxspd) {
+
+    stepper_stop();
 
     if (dir) {
         STP_DIR_PORT.OUTSET = STP_DIR_BIT;
@@ -172,13 +174,6 @@ void stepper_rotate(bool dir, uint8_t cycles, uint8_t maxspd) {
     LOGS(" P:");
     LOGDEC_U16(stepper.minp);
     LOGNL();
-
-    // Configure TCB0 for waveform output
-    TCB0.CCMP = STP_HIGH_P;
-    // Enable waveform output and configure single-shot mode
-    TCB0.CTRLB = TCB_CCMPEN_bm | TCB_CNTMODE_SINGLE_gc;
-    // Synchronize with TCA0 and enable timer
-    TCB0.CTRLA = TCB_SYNCUPD_bm | TCB_CLKSEL_CLKTCA_gc | TCB_ENABLE_bm;
 
     // Start TCA0
     TCA0.SINGLE.CTRLA = TCA_CLKSEL | TCA_SINGLE_ENABLE_bm;
