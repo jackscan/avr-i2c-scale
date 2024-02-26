@@ -91,7 +91,7 @@ ISR(TCB0_INT_vect) {
         // Stop timer
         TCB0.CTRLA = 0;
         // Disable interrupt
-        TCB0.INTCTRL = TCB_CAPT_bm;
+        TCB0.INTCTRL = 0;
         // Clear interrupt flag
         TCB0.INTFLAGS = TCB_CAPT_bm;
     }
