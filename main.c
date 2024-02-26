@@ -354,6 +354,10 @@ static void loop(void) {
                 hx711_powerdown();
                 timer_stop();
             }
+
+            if (twi_data.task != TWI_CMD_ROTATE && stepper_is_running()) {
+                stepper_stop();
+            }
         }
         if (twi_data.task == TWI_CMD_ROTATE) {
             last_stepper_cycle = stepper_get_cycle();
